@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RippleRx — Medication Adherence Risk Radar</title>
+  <style>
+    :root{--ink:#12232f;--muted:#4f6169;--paper:#f4f7f5;--surface:#fff;--line:#dce5e1;--railbg:#122b23;--teal:#147a78;--teal-soft:#ddf2ee;--green:#237151;--amber:#b66c18;--red:#b9403a;--shadow:0 12px 28px #17303a14}
+    :root[data-theme="dark"]{--ink:#e8eef0;--muted:#9db0b6;--paper:#0f1b1d;--surface:#16262a;--line:#26383c}
+    *{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif} button{font:inherit}
+    .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .skip-link{position:absolute;left:8px;top:-44px;background:#0d2534;color:#fff;padding:9px 14px;border-radius:6px;z-index:200;transition:top .15s;text-decoration:none;font-weight:600}
+    .skip-link:focus{top:8px}
+    :focus-visible{outline:3px solid #f2b705;outline-offset:2px}
+    @media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+    .shell{min-height:100vh;display:grid;grid-template-columns:282px 1fr}
+    .rail{background:var(--railbg);color:#dcefe6;padding:22px 16px;display:flex;flex-direction:column;gap:16px}
+    .brand{padding:0 8px}.brand h1{font:600 27px Georgia,serif;margin:0;color:#fff}.brand p{margin:3px 0;color:#8fb8ab;font-size:12px}
+    .navlabel{font-size:11px;color:#7fa79a;letter-spacing:.1em;text-transform:uppercase;margin:0 8px 7px}
+    .navitem{width:100%;display:flex;gap:10px;align-items:center;padding:10px 12px;border:0;border-radius:8px;color:#cfe6dc;background:none;text-align:left;cursor:pointer}
+    .navitem:hover,.navitem.active{background:#1d4536;color:white}
+    .navitem .count{margin-left:auto;background:#c0392b;border-radius:99px;padding:1px 7px;font-size:11px}
+    .section{border-top:1px solid #234438;padding-top:15px}
+    .riskLegend{display:grid;gap:9px;padding:2px 8px}
+    .riskLegend div{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#cfe6dc}
+    .riskLegend div span{display:flex;align-items:center;gap:8px}.riskLegend b{color:#fff;font-weight:700}
+    .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+    .rail footer{margin-top:auto;color:#7ba396;font-size:11px;line-height:1.5;padding:0 8px}
+    .page{min-width:0}
+    .top{background:var(--surface);border-bottom:1px solid var(--line);padding:15px 34px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .weekbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .weeklabel{font-size:13px;color:var(--muted)}
+    .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+    .icon,.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:9px 12px;cursor:pointer}
+    .btn.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+    .btn.outline-warn{background:var(--surface);border-color:var(--red);color:var(--red)}
+    .icon{padding:9px 11px;position:relative}
+    .badge{position:absolute;top:-6px;right:-6px;background:#c0392b;color:#fff;border-radius:99px;font-size:10px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4}
+    .main{padding:28px 34px 44px;max-width:1520px;margin:auto}
+    .alertbar{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff4e5;border:1px solid #f0d59e;color:#5c380a;border-radius:9px;padding:11px 14px;margin-bottom:22px}
+    .alertbar b{font-size:13px}
+    .layout{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(560px,1.6fr);gap:22px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+    .cardhead{padding:17px 19px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .cardhead h3{font:600 16px Georgia,serif;margin:0}.cardhead p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+    .search{border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:calc(100% - 28px);margin:0 14px 10px;font:inherit;background:var(--surface);color:var(--ink)}
+    .patients{padding:5px 8px 10px;max-height:600px;overflow:auto}
+    .patient{width:100%;background:none;border:0;border-left:4px solid transparent;text-align:left;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 10px;border-radius:6px;cursor:pointer;color:var(--ink)}
+    .patient:hover{background:#edf7f5}
+    .patient[aria-selected="true"]{background:#eef7f4}
+    .patient b{display:block;font-size:13px}.patient small{color:var(--muted)}
+    .score{font:700 18px Georgia,serif;text-align:right}
+    .high-text{color:#a3382f}.medium-text{color:#8a5a12}.low-text{color:#1c5e42}
+    .detail{display:grid;gap:18px}
+    .person{padding:21px}.person-top{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
+    .name{font:500 28px Georgia,serif;margin:0}.meta{color:var(--muted);margin:3px 0 0}
+    .pill{display:inline-block;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700}
+    .pill.high{background:#fae7e5;color:#8c2f28}.pill.medium{background:#fff2dc;color:#734a0f}.pill.low{background:#e4f2e9;color:#184f37}
+    .detailgrid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+    .threecol{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .gaugecard{display:grid;place-items:center;gap:12px;padding:24px 10px}
+    .gauge{width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--gcolor,#147a78) calc(var(--pct,0)*1%), #e7ece9 0);display:grid;place-items:center}
+    .gauge-inner{width:82px;height:82px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font:600 28px Georgia,serif;color:var(--ink)}
+    .infocard{padding:22px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+    .infocard .sub{font-size:12px;color:var(--muted)}
+    .infocard h3{margin:0;font:600 22px Georgia,serif}
+    .actionrow{display:flex;gap:9px;flex-wrap:wrap}
+    .signals{padding:18px 20px}
+    .sigrow{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--line)}
+    .sigrow:first-of-type{border-top:0}
+    .siglabel{font-size:13px;color:var(--muted)}
+    .sigbars{display:flex;gap:5px;align-items:flex-end;height:34px}
+    .sigbar{width:10px;border-radius:2px 2px 0 0}
+    .sigdots{display:flex;gap:7px}
+    .sigdot{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:transparent}
+    .sigdot.miss{background:var(--red);border-color:var(--red)}
+    .assessment{padding:20px}.assessment p{margin:10px 0 0;line-height:1.65;color:var(--ink)}
+    .nextstep{background:var(--teal-soft);border:1px solid #b9dfd9;border-radius:9px;padding:16px 18px}
+    .nextstep .sub{font-size:11px;color:#1c5a54;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .nextstep p{margin:6px 0 0;color:#0f3934}
+    .device{padding:0}.device-grid{display:grid;grid-template-columns:1.2fr .8fr}
+    .device-main{padding:20px;border-right:1px solid var(--line)}.device-main h3{margin:0;font:600 16px Georgia,serif}
+    .sub{color:var(--muted);font-size:12px;margin:3px 0 16px}
+    .dosebox{background:#ecf8f6;border:1px solid #b9dfd9;border-radius:9px;padding:14px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}
+    .deviceicon{font-size:28px}.dosebox b{display:block}.dosebox small{color:#33544f}
+    .on-time{color:#184f37;font-weight:700;font-size:12px}
+    .pending{color:#734a0f;font-weight:700;font-size:12px}
+    .device-side{padding:20px}.streak{font:500 35px Georgia,serif;color:var(--teal);margin:3px 0}
+    .week{display:flex;gap:5px;margin-top:11px}
+    .day{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:white;font-size:10px;background:var(--green)}
+    .day.late{background:var(--amber)}.day.miss{background:var(--red)}
+    .plan{padding:19px}.plan h3{margin:0;font:600 16px Georgia,serif}.plan h4{margin:16px 0 6px;font:600 13px Georgia,serif}
+    .plan ul{list-style:none;margin:13px 0 0;padding:0;display:grid;gap:9px}
+    .plan li{display:flex;gap:9px;padding:10px;background:var(--paper);border-radius:7px}
+    .plan li span{color:var(--teal);font-weight:800}.plan small{display:block;color:var(--muted);margin-top:2px}
+    .phonewrap{padding:18px}
+    .phoneframe{background:#102b38;border-radius:20px;padding:14px;color:#dff5f2;min-height:150px}
+    .phoneheader{font-weight:700;font-size:13px;text-align:center;margin-bottom:10px;color:#fff}
+    .phonebody{background:#0c222d;border-radius:12px;padding:14px;min-height:110px;font-size:12px}
+    .phoneempty{color:#7fa3a1;text-align:center;margin:28px 0}
+    .phonebubble{background:#16323d;border-radius:8px;padding:10px;margin-bottom:8px;white-space:pre-wrap;line-height:1.5}
+    .phoneplanmini div{padding:3px 0;font-size:11px;color:#bcdad8}
+    .phonewhen{font-size:10px;color:#7fa3a1;margin:8px 0 0}
+    .historycard{padding:18px}
+    .histitem{border-left:3px solid var(--teal);padding:8px 0 8px 12px;margin-bottom:10px}
+    .histitem b{display:block;font-size:13px;line-height:1.4}
+    .histitem small{display:block;color:var(--muted);margin-top:4px;font-size:11px}
+    .toast{position:fixed;right:22px;bottom:22px;background:#133845;color:white;padding:13px 16px;border-radius:8px;box-shadow:var(--shadow);opacity:0;transform:translateY(15px);transition:.25s;pointer-events:none;max-width:340px;z-index:60}
+    .toast.show{opacity:1;transform:none}
+    @media(max-width:1100px){.detailgrid{grid-template-columns:1fr}.threecol{grid-template-columns:1fr}}
+    @media(max-width:900px){.shell{grid-template-columns:1fr}.rail{display:none}.main{padding:20px}.top{padding:15px 20px}.layout{grid-template-columns:1fr}.device-grid{grid-template-columns:1fr}.device-main{border-right:0;border-bottom:1px solid var(--line)}}
+    .modal{position:fixed;inset:0;z-index:10;display:none;place-items:center;padding:20px;background:#061a2578}.modal.open{display:grid}
+    .modalbox{width:min(850px,100%);max-height:90vh;overflow:auto;background:var(--surface);border-radius:12px;box-shadow:0 20px 60px #061a2580}
+    .modalhead{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+    .modalhead h2{font:500 23px Georgia,serif;margin:0}.modalhead p{color:var(--muted);font-size:12px;margin:3px 0 0}
+    .close{border:0;background:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px}
+    .modalbody{padding:20px 22px;display:grid;grid-template-columns:1fr 260px;gap:22px}
+    .triggergrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:10px 0 18px}
+    .trigger{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px}.trigger b{display:block;margin-bottom:3px}
+    .message{width:100%;min-height:150px;border:1px solid var(--line);border-radius:8px;padding:11px;font:13px/1.45 inherit;color:var(--ink);background:var(--surface);resize:vertical}
+    .fieldlabel{font-size:12px;font-weight:700;display:block;margin:16px 0 6px}
+    .checks{display:flex;gap:13px;flex-wrap:wrap;font-size:12px}.checks label{display:flex;gap:6px;align-items:center}
+    .phone{background:#102b38;border:7px solid #102b38;border-radius:28px;min-height:435px;overflow:hidden;color:#17333a;box-shadow:0 8px 24px #15313a24}
+    .phonebar{background:#102b38;color:#dff5f2;text-align:center;font-size:11px;padding:5px}
+    .phonescreen{background:#eef7f5;min-height:395px;padding:15px 12px}
+    .phonebrand{font:600 15px Georgia,serif;color:#147a78}.phonebrand span{float:right;font:11px inherit;color:#4c6362}
+    .bubble{background:white;border-radius:4px 14px 14px 14px;padding:11px;margin:16px 0 8px;font-size:12px;line-height:1.5;box-shadow:0 2px 7px #17303a10;white-space:pre-wrap}
+    .bubbletime{font-size:10px;color:#4c6362;margin-left:7px}
+    .phonecard{background:#ddf2ee;border:1px solid #b9dfd9;border-radius:9px;padding:10px;margin-top:14px;font-size:11px}
+    .phonecard b{display:block;margin-bottom:5px}
+    .modalfoot{padding:15px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .safety{font-size:11px;color:var(--muted);max-width:340px}
+    @media(max-width:650px){.triggergrid{grid-template-columns:1fr}.modalbody{grid-template-columns:1fr}.phone{min-height:0}.phonescreen{min-height:280px}}
+    body.large-text{font-size:16px}
+    body.large-text .name{font-size:34px}
+    body.large-text .card h3,body.large-text .cardhead h3{font-size:19px}
+    body.large-text .patient b{font-size:15px}
+    body.large-text .patient small,body.large-text .meta,body.large-text .sub{font-size:13px}
+    body.large-text .score{font-size:21px}
+    body.large-text .bubble,body.large-text .message{font-size:14px}
+    body.large-text .assessment p,body.large-text .nextstep p{font-size:15px}
+  </style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+<div class="shell">
+  <nav class="rail" aria-label="Primary">
+    <div class="brand"><h1>RippleRx</h1><p>Medication adherence risk radar</p></div>
+    <div>
+      <p class="navlabel">Care team</p>
+      <button class="navitem active" aria-current="page">◫ Patient command center <span class="count" id="riskCount">0</span></button>
+      <button class="navitem" onclick="openDeviceFleetReport()">⌁ Device fleet</button>
+      <button class="navitem" onclick="openCareTasksReport()">◷ Care tasks</button>
+      <button class="navitem" onclick="openPanelReport()">▱ Reports</button>
+    </div>
+    <div class="section">
+      <p class="navlabel">Today’s panel</p>
+      <div class="riskLegend">
+        <div><span><i class="dot" style="background:#c0392b"></i>High risk</span><b id="highCount">0</b></div>
+        <div><span><i class="dot" style="background:#d59231"></i>Medium risk</span><b id="medCount">0</b></div>
+        <div><span><i class="dot" style="background:#4d9671"></i>Low risk</span><b id="lowCount">0</b></div>
+      </div>
+    </div>
+    <footer>Demo only — all patient and device records are synthetic. A dispense event indicates medication was removed, not confirmed ingestion.</footer>
+  </nav>
+  <section class="page">
+    <header class="top">
+      <div class="weekbar">
+        <span class="weeklabel">Week: <b id="weekLabel">Current</b></span>
+        <button class="btn primary" onclick="advanceDay()">Simulate next week ▶</button>
+        <button class="btn" onclick="resetAll()">↺ Reset</button>
+      </div>
+      <div class="top-actions">
+        <button class="icon" onclick="toggleTextSize()" id="textSizeBtn" aria-pressed="false" aria-label="Toggle larger text">Aa</button>
+        <button class="icon" onclick="showUrgentToast()" aria-label="Show urgent cases">🔥</button>
+        <button class="icon" onclick="toggleTheme()" id="themeBtn" aria-pressed="false" aria-label="Toggle dark mode">🌙</button>
+        <button class="icon" onclick="showNotifications()" aria-label="Notifications">🔔<span class="badge" id="notifBadge">0</span></button>
+      </div>
+    </header>
+    <main class="main" id="main" tabindex="-1">
+      <div class="alertbar" id="alertbar" role="status">
+        <div><b></b><br><span style="font-size:12px"></span></div>
+        <button class="btn"></button>
+      </div>
+      <div class="layout">
+        <section class="card">
+          <div class="cardhead"><div><h3>Patient panel</h3><p>Prioritized by clinical adherence risk</p></div><span class="pill medium">Live demo</span></div>
+          <label for="search" class="visually-hidden">Search patient or condition</label>
+          <input id="search" class="search" placeholder="Search patients" oninput="renderPatients()">
+          <label for="conditionFilter" class="visually-hidden">Filter by condition</label>
+          <select id="conditionFilter" class="search" onchange="renderPatients()"><option value="">All conditions</option></select>
+          <div id="patients" class="patients" role="listbox" aria-label="Patients, sorted by risk score"></div>
+        </section>
+        <section id="detail" class="detail" aria-live="polite"></section>
+      </div>
+    </main>
+  </section>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="reminderModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="reminderTitle" aria-describedby="reminderSafety">
+  <div class="modalbox">
+    <div class="modalhead">
+      <div><h2 id="reminderTitle">Patient reminder window</h2><p id="reminderSub"></p></div>
+      <button class="close" onclick="closeReminder()" aria-label="Close reminder window">×</button>
+    </div>
+    <div class="modalbody">
+      <div>
+        <span class="fieldlabel" style="margin-top:0">Why this patient is being contacted</span>
+        <div id="triggers" class="triggergrid"></div>
+        <label class="fieldlabel" for="message">Patient message</label>
+        <textarea id="message" class="message" oninput="previewReminder()"></textarea>
+        <label class="fieldlabel" for="sendTime">Send reminder</label>
+        <select id="sendTime" class="search" style="margin:0;width:100%" onchange="previewReminder()">
+          <option>Now — secure patient-app notification</option>
+          <option>In 1 hour</option>
+          <option>Tomorrow at 9:00 AM</option>
+        </select>
+        <span class="fieldlabel">Include in the plan</span>
+        <div class="checks">
+          <label><input type="checkbox" id="chkAppt" checked onchange="previewReminder()"> Appointment rescheduling link</label>
+          <label><input type="checkbox" id="chkDiet" checked onchange="previewReminder()"> Dietary guidance</label>
+          <label><input type="checkbox" id="chkActivity" checked onchange="previewReminder()"> Physical activity guidance</label>
+          <label><input type="checkbox" id="chkDevice" checked onchange="previewReminder()"> Smart-dispenser reminder</label>
+        </div>
+      </div>
+      <aside class="phone" aria-label="Patient phone preview">
+        <div class="phonebar">9:41&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ◉ ◉ ◉</div>
+        <div class="phonescreen">
+          <div class="phonebrand">RippleRx <span>Patient view</span></div>
+          <div class="bubble" id="phoneMessage"></div>
+          <div class="bubbletime" id="phoneTime"></div>
+          <div class="phonecard"><b>Your support plan</b><div id="phonePlan"></div></div>
+        </div>
+      </aside>
+    </div>
+    <div class="modalfoot">
+      <span class="safety" id="reminderSafety">Generic patient education only, not medical advice. A clinician approves every message.</span>
+      <div><button class="btn" onclick="closeReminder()">Cancel</button> <button class="btn primary" onclick="sendReminderPlan()">Approve &amp; send</button></div>
+    </div>
+  </div>
+</div>
+<script>
+const patients=[
+ {name:'Anita Rao',age:58,condition:'Hypertension',risk:84,pattern:'Sustained pattern',confidence:'High confidence',device:'Connected · last dose 08:03',streak:10,status:'high',deviceState:'On time',last:'Dose dispensed on time',time:'08:03',refill:'16 days late',appt:'2 missed',activity:'−25%',plan:['Send clinician-reviewed reminder plan','Reschedule blood pressure check','Offer simple daily reminder routine']},
+ {name:'Meena Iyer',age:67,condition:'Post-MI cardiac care',risk:68,pattern:'Emerging pattern',confidence:'High confidence',device:'Connected · last dose yesterday',streak:6,status:'high',deviceState:'On time',last:'Dose dispensed on time',time:'Yesterday',refill:'9 days late',appt:'On track',activity:'−14%',plan:['Review refill barrier at next outreach','Confirm medication schedule','Keep cardiac-care follow-up']},
+ {name:'Farhan Sheikh',age:34,condition:'Tuberculosis (DOTS)',risk:59,pattern:'Emerging pattern',confidence:'Medium confidence',device:'No dispenser assigned',streak:4,status:'medium',deviceState:'No device',last:'Appointment attendance concern',time:'Yesterday',refill:'On track',appt:'2 missed',activity:'−3%',plan:['Call to understand attendance barrier','Offer appointment reschedule','Review DOTS support plan']},
+ {name:'Rajesh Kumar',age:45,condition:'Type 2 diabetes',risk:22,pattern:'Temporary blip',confidence:'Medium confidence',device:'Connected · last dose 07:58',streak:18,status:'low',deviceState:'On time',last:'Dose dispensed on time',time:'07:58',refill:'On track',appt:'On track',activity:'+4%',plan:['Continue current reminder schedule','Monitor next refill date']},
+ {name:'Priya Nair',age:52,condition:'Hypertension',risk:9,pattern:'Stable',confidence:'High confidence',device:'Connected · last dose 08:01',streak:31,status:'low',deviceState:'On time',last:'Dose dispensed on time',time:'08:01',refill:'On track',appt:'On track',activity:'+1%',plan:['Continue current care plan']},
+ {name:'Suresh Pillai',age:71,condition:'Diabetes + hypertension',risk:91,pattern:'Sustained pattern',confidence:'High confidence',device:'Connected · dose window open',streak:0,status:'high',deviceState:'Late dose',last:'Morning dose not dispensed',time:'08:30',refill:'15 days late',appt:'2 missed',activity:'−20%',plan:['Call patient or caregiver today','Send late-dose reminder','Reschedule missed diabetes review']},
+ {name:'Kavya Menon',age:29,condition:'Postpartum diabetes',risk:7,pattern:'Stable',confidence:'High confidence',device:'No dispenser assigned',streak:24,status:'low',deviceState:'No device',last:'Follow-up completed',time:'Yesterday',refill:'On track',appt:'On track',activity:'+1%',plan:['Continue current care plan']}
+];
+
+function getCarePlan(condition){
+  const c=condition.toLowerCase();let diet=[],activity=[];
+  if(c.includes('hypertension')){diet.push('Reduce added salt; choose low-sodium meals','Add more fruits, vegetables and whole grains');activity.push('Aim for a 30-minute brisk walk most days','Try light stretching to support blood pressure');}
+  if(c.includes('diabetes')){diet.push('Favor low-glycemic, high-fiber meals','Spread carbohydrates evenly across the day');activity.push('Aim for 150 minutes/week of moderate activity, e.g. walking','A short walk after meals can help with glucose control');}
+  if(c.includes('cardiac')||c.includes('mi')){diet.push('Choose heart-healthy fats and limit saturated fat','Keep sodium intake low');activity.push('Follow cardiac-rehab-approved activity only','Build up walking gradually as cleared by your clinician');}
+  if(c.includes('tuberculosis')){diet.push('Eat high-protein, calorie-sufficient meals to support recovery','Stay well hydrated');activity.push('Rest as needed and avoid overexertion','Keep activity light until your clinician advises otherwise');}
+  if(!diet.length){diet.push('Maintain a balanced, nutrient-rich diet');activity.push('Stay active with regular movement through the day');}
+  return {diet:[...new Set(diet)],activity:[...new Set(activity)]};
+}
+function statusFor(risk){return risk>=60?'high':risk>=30?'medium':'low';}
+function parseRefillDays(s){const m=String(s).match(/(\d+)/);return m?parseInt(m[1]):0;}
+function parseActivityPct(s){const m=String(s).match(/([+\-−]?\d+)/);return m?parseInt(m[1].replace('−','-')):0;}
+function parseMissedAppts(s){const m=String(s).match(/(\d+)/);return m?parseInt(m[1]):0;}
+function seedRandom(seedStr){let seed=0;for(let i=0;i<seedStr.length;i++)seed=(seed*31+seedStr.charCodeAt(i))>>>0;return function(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
+function buildWeeklySignals(p){
+  const rand=seedRandom(p.name);
+  const refillEnd=parseRefillDays(p.refill),severityEnd=Math.min(10,Math.max(0,Math.round(p.risk/10))),activityEnd=parseActivityPct(p.activity),missed=parseMissedAppts(p.appt);
+  const refillWeeks=[],severityWeeks=[],activityWeeks=[],apptWeeks=[];
+  for(let w=0;w<8;w++){
+    const t=w/7;
+    refillWeeks.push(Math.max(0,Math.round(refillEnd*t+(rand()-0.5)*2)));
+    severityWeeks.push(Math.min(10,Math.max(0,Math.round((severityEnd-3)*(1-t)+severityEnd*t+(rand()-0.5)))));
+    activityWeeks.push(Math.round(activityEnd*t+(rand()-0.5)*4));
+    apptWeeks.push(true);
+  }
+  let placed=0,idx=7;
+  while(placed<missed&&idx>=0){apptWeeks[idx]=false;placed++;idx-=(Math.floor(rand()*2)+1);}
+  return {refillWeeks,severityWeeks,activityWeeks,apptWeeks};
+}
+patients.forEach(p=>{const cp=getCarePlan(p.condition);p.diet=cp.diet;p.activityRec=cp.activity;p.scoreHistory=[p.risk];p.pendingReminder=false;p.timelineExtra=[];p.status=statusFor(p.risk);p.signals=buildWeeklySignals(p);p.lastReminderSummary=null;});
+const initialPatientsJSON=JSON.stringify(patients);
+
+let selected=4,lastFocusedEl=null,weekNum=0;
+const colors={high:'#c45047',medium:'#d59231',low:'#4d9671'};
+const colorHex={high:'#c0392b',medium:'#d59231',low:'#4d9671'};
+
+function weekLabelText(){return weekNum===0?'Current':'+'+weekNum+' week'+(weekNum>1?'s':'');}
+
+function renderBars(values,max,colorFn){
+  return `<div class="sigbars">${values.map(v=>`<span class="sigbar" style="height:${Math.max(6,Math.round((Math.min(Math.abs(v),max)/max)*32))}px;background:${colorFn(v)}"></span>`).join('')}</div>`;
+}
+function renderDots(values){
+  return `<div class="sigdots">${values.map(v=>`<span class="sigdot ${v?'':'miss'}"></span>`).join('')}</div>`;
+}
+
+function generateAssessment(p){
+  const refillDays=parseRefillDays(p.refill),severity=Math.min(10,Math.max(0,Math.round(p.risk/10))),activityPct=parseActivityPct(p.activity),missed=parseMissedAppts(p.appt);
+  let text='';
+  text+=refillDays>0?`Refills have run about ${refillDays} days late on average over the last 3 cycles; `:`Refills have stayed on track over the last 3 cycles; `;
+  text+=`follow-up notes show ${severity>=6?'elevated':severity>=3?'moderate':'low'} symptom severity (avg ${severity}.0/10 across recent visits); `;
+  text+=`wearable activity is ${activityPct<0?`down about ${Math.abs(activityPct)}%`:`up about ${activityPct}%`} versus this patient's baseline; `;
+  text+=missed>0?`${missed} of the last 4 scheduled appointments were missed. `:`appointments have been attended consistently. `;
+  text+=`Overall this reads as <strong>${p.pattern.toLowerCase()}</strong>, with <strong>${p.confidence.toLowerCase()}</strong> — ${p.status==='high'?'multiple independent signals point the same way.':p.status==='medium'?'signals are mixed but trending in one direction.':'signals are stable and reassuring.'}`;
+  return text;
+}
+function suggestedNextStep(p){
+  if(p.status==='high')return 'Recommend care-team outreach and a medication review within the week.';
+  if(p.status==='medium')return 'Schedule a check-in call within the next two weeks to confirm the trend.';
+  return 'Continue the current care plan; next scheduled review in 4 weeks.';
+}
+function stripHtml(s){return s.replace(/<[^>]+>/g,'');}
+
+function populateConditionFilter(){
+  const sel=document.getElementById('conditionFilter');
+  const current=sel.value;
+  const conditions=[...new Set(patients.map(p=>p.condition))].sort();
+  sel.innerHTML='<option value="">All conditions</option>'+conditions.map(c=>`<option ${c===current?'selected':''}>${c}</option>`).join('');
+}
+
+function renderPatients(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const cond=document.getElementById('conditionFilter').value;
+  const el=document.getElementById('patients');
+  el.innerHTML='';
+  patients.filter(p=>(p.name+p.condition).toLowerCase().includes(q)&&(!cond||p.condition===cond)).sort((a,b)=>b.risk-a.risk).forEach(p=>{
+    const i=patients.indexOf(p);
+    const isSelected=i===selected;
+    el.insertAdjacentHTML('beforeend',`<button class="patient" role="option" aria-selected="${isSelected}" style="border-left-color:${colors[p.status]}" onclick="selectPatient(${i})" aria-label="${p.name}, ${p.condition}, risk score ${p.risk}, ${p.status} risk${p.deviceState==='Late dose'?', dose is late':''}"><span><b>${p.name}</b><small>${p.condition}</small></span><span class="score ${p.status}-text">${p.risk}</span></button>`);
+  });
+}
+
+function selectPatient(i){selected=i;renderPatients();renderDetail();}
+
+function renderDetail(){
+  const p=patients[selected];
+  const days=Array.from({length:7},(_,i)=>`<span class="day ${p.deviceState==='Late dose'&&i===6?'miss':i===5?'late':''}">${['M','T','W','T','F','S','S'][i]}</span>`).join('');
+  const dietList=p.diet.map(d=>`<li><span>🥗</span><div>${d}<small>Generic guidance — confirm with clinician before sharing.</small></div></li>`).join('');
+  const activityList=p.activityRec.map(a=>`<li><span>🚶</span><div>${a}<small>Generic guidance — confirm with clinician before sharing.</small></div></li>`).join('');
+  const histItems=p.timelineExtra.map(e=>`<div class="histitem" style="border-color:${e.color}"><b>${e.label}</b><small>${e.sub}</small></div>`).join('');
+  const phoneBody=p.lastReminderSummary?`<div class="phonebubble">${p.lastReminderSummary.message}</div><div class="phoneplanmini">${p.lastReminderSummary.planItems.map(x=>`<div>${x}</div>`).join('')}</div><p class="phonewhen">${p.lastReminderSummary.when}</p>`:'<p class="phoneempty">No reminders sent yet.</p>';
+  document.getElementById('detail').innerHTML=`
+  <section class="card person">
+    <div class="person-top">
+      <div><h2 class="name">${p.name}</h2><p class="meta">${p.age} years · ${p.condition}</p></div>
+      <div style="text-align:right">
+        <p class="meta">Simulated week: <b>${weekLabelText()}</b></p>
+        ${p.status==='high'?'<span class="pill high" style="margin-top:6px;display:inline-block">Auto-flagged for outreach</span>':''}
+      </div>
+    </div>
+  </section>
+  <div class="detailgrid">
+    <div style="display:grid;gap:18px">
+      <div class="threecol">
+        <section class="card gaugecard">
+          <div class="gauge" style="--pct:${p.risk};--gcolor:${colorHex[p.status]}"><div class="gauge-inner">${p.risk}</div></div>
+          <span class="pill ${p.status}">${p.status} risk</span>
+        </section>
+        <section class="card infocard"><span class="sub">Pattern</span><h3>${p.pattern}</h3></section>
+        <section class="card infocard"><span class="sub">Confidence</span><h3>${p.confidence}</h3></section>
+      </div>
+      <div class="actionrow">
+        <button class="btn primary" onclick="sendAlertToDoctor()">Send alert to doctor</button>
+        <button class="btn" onclick="openReminder(this)">Send reminder to patient</button>
+        <button class="btn" onclick="copyClinicalNote()">Copy clinical note</button>
+      </div>
+      <section class="card signals">
+        <h3 style="font:600 16px Georgia,serif;margin:0 0 6px">Signals, last 8 weeks</h3>
+        <div class="sigrow"><span class="siglabel">Refill timing</span>${renderBars(p.signals.refillWeeks,20,v=>v===0?'#4d9671':v<7?'#d59231':'#c45047')}</div>
+        <div class="sigrow"><span class="siglabel">Symptom severity</span>${renderBars(p.signals.severityWeeks,10,v=>v<=3?'#4d9671':v<=6?'#d59231':'#c45047')}</div>
+        <div class="sigrow"><span class="siglabel">Activity vs baseline</span>${renderBars(p.signals.activityWeeks,30,v=>v>=0?'#4d9671':v>-15?'#d59231':'#c45047')}</div>
+        <div class="sigrow"><span class="siglabel">Appointments</span>${renderDots(p.signals.apptWeeks)}</div>
+      </section>
+      <section class="card assessment">
+        <h3 style="font:600 16px Georgia,serif;margin:0">Assessment</h3>
+        <p>${generateAssessment(p)}</p>
+      </section>
+      <div class="nextstep"><span class="sub">Suggested next step</span><p>${suggestedNextStep(p)}</p></div>
+      <section class="card device">
+        <div class="device-grid">
+          <div class="device-main"><h3>Smart dispenser signal</h3><p class="sub">${p.device}</p>
+            <div class="dosebox"><span class="deviceicon">💊</span><span><b>${p.last}</b><small>${p.time} · scheduled medication window</small></span><span class="${p.deviceState==='Late dose'?'high-text':'on-time'}">${p.pendingReminder?'Reminder scheduled':p.deviceState}</span></div>
+            <p class="sub" style="margin:14px 0 0">Device events confirm dispensing/removal; they do not confirm ingestion.</p>
+            ${p.pendingReminder?'<p class="pending">A reminder is scheduled for this patient. Use “Simulate next week” to see the outcome.</p>':''}
+          </div>
+          <div class="device-side"><span style="font-size:12px;color:var(--muted)">Current adherence streak</span><div class="streak">${p.streak} days</div><div class="week">${days}</div></div>
+        </div>
+      </section>
+      <div class="actionrow">
+        <button class="btn" onclick="showToast('Care task assigned to coordinator')">Assign outreach</button>
+        <button class="btn" onclick="showToast('Patient’s device timeline opened')">View device history</button>
+        <button class="btn outline-warn" onclick="simulateMissed()">Simulate missed dose (demo)</button>
+      </div>
+      <section class="card plan">
+        <div class="cardhead" style="padding:0 0 13px;border-bottom:0"><div><h3>Suggested next steps</h3><p>Generic, clinician-reviewed recommendations only</p></div></div>
+        <ul>${p.plan.map(x=>`<li><span>✓</span><div>${x}<small>Requires clinician approval before patient delivery.</small></div></li>`).join('')}</ul>
+        <h4>Dietary guidance to help lower risk</h4>
+        <ul>${dietList}</ul>
+        <h4>Physical activity guidance to help lower risk</h4>
+        <ul>${activityList}</ul>
+      </section>
+    </div>
+    <div style="display:grid;gap:18px">
+      <section class="card phonewrap">
+        <h3 style="font:600 16px Georgia,serif;margin:0 0 12px">Patient view (simulated)</h3>
+        <div class="phoneframe">
+          <div class="phoneheader">${p.name.split(' ')[0]}’s phone</div>
+          <div class="phonebody">${phoneBody}</div>
+        </div>
+      </section>
+      <section class="card historycard">
+        <h3 style="font:600 16px Georgia,serif;margin:0 0 10px">History for this patient</h3>
+        <div class="histlist">
+          ${histItems}
+          <div class="histitem" style="border-color:${colorHex[p.status]}"><b>${p.name} flagged ${p.status} risk (${p.pattern.toLowerCase()} pattern, ${p.confidence.toLowerCase()}).</b><small>Earlier</small></div>
+        </div>
+      </section>
+    </div>
+  </div>`;
+}
+
+function updateOverviewCounts(){
+  document.getElementById('highCount').textContent=patients.filter(p=>p.status==='high').length;
+  document.getElementById('medCount').textContent=patients.filter(p=>p.status==='medium').length;
+  document.getElementById('lowCount').textContent=patients.filter(p=>p.status==='low').length;
+  document.getElementById('riskCount').textContent=patients.filter(p=>p.status==='high'||p.status==='medium').length;
+  const notif=patients.filter(p=>p.deviceState==='Late dose'||p.pendingReminder).length;
+  document.getElementById('notifBadge').textContent=notif;
+}
+
+function updateAlertBar(){
+  const bar=document.getElementById('alertbar');
+  const lateList=patients.filter(p=>p.deviceState==='Late dose');
+  if(lateList.length){
+    bar.style.display='';
+    bar.querySelector('b').textContent=`${lateList.length} device-linked dose${lateList.length>1?'s':''} require attention`;
+    bar.querySelector('span').textContent=`${lateList[0].name}’s dose has not been dispensed after the reminder window.`;
+    const i=patients.indexOf(lateList[0]);
+    const btn=bar.querySelector('button');btn.textContent='Review patient';btn.onclick=()=>selectPatient(i);
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function applyAdherenceEvent(i,positive,magnitude){
+  const p=patients[i];const before=p.risk;
+  const delta=magnitude||6;
+  p.risk=positive?Math.max(3,p.risk-delta):Math.min(97,p.risk+delta);
+  p.status=statusFor(p.risk);
+  p.streak=positive?p.streak+1:0;
+  p.deviceState=positive?'On time':'Late dose';
+  p.last=positive?'Dose dispensed on time':'Dose missed after reminder window';
+  p.time='Just now';
+  p.scoreHistory.push(p.risk);if(p.scoreHistory.length>10)p.scoreHistory.shift();
+  p.timelineExtra.unshift({label:positive?`Care reminder acknowledged — risk ${before} → ${p.risk}`:`Dose missed — risk ${before} → ${p.risk}`,sub:positive?'Simulated patient response':'Simulated device event',time:'Just now',color:positive?'#237151':'#b9403a'});
+  if(p.timelineExtra.length>4)p.timelineExtra.pop();
+  return before;
+}
+
+function simulateMissed(){
+  const i=selected,p=patients[i];
+  const before=applyAdherenceEvent(i,false,6);
+  renderPatients();renderDetail();updateOverviewCounts();updateAlertBar();
+  showToast(`Simulated missed dose — ${p.name}'s risk score rose from ${before} to ${p.risk}`);
+}
+
+function advanceDay(){
+  patients.forEach((p,i)=>{
+    if(p.pendingReminder){applyAdherenceEvent(i,true,6);p.pendingReminder=false;}
+    else if(p.status==='high'){applyAdherenceEvent(i,false,3);}
+  });
+  weekNum++;
+  document.getElementById('weekLabel').textContent=weekLabelText();
+  renderPatients();renderDetail();updateOverviewCounts();updateAlertBar();
+  showToast('Simulated one week passing — risk scores updated across the panel');
+}
+
+function resetAll(){
+  const fresh=JSON.parse(initialPatientsJSON);
+  patients.length=0;patients.push(...fresh);
+  selected=4;weekNum=0;
+  document.getElementById('weekLabel').textContent=weekLabelText();
+  populateConditionFilter();
+  renderPatients();renderDetail();updateOverviewCounts();updateAlertBar();
+  showToast('Demo reset to initial state');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove('show'),3200);
+}
+function showUrgentToast(){
+  const urgent=patients.filter(p=>p.status==='high');
+  showToast(urgent.length?`${urgent.length} patient(s) need urgent review: ${urgent.map(p=>p.name).join(', ')}`:'No patients currently need urgent review');
+}
+function showNotifications(){
+  const late=patients.filter(p=>p.deviceState==='Late dose');
+  const pending=patients.filter(p=>p.pendingReminder);
+  const parts=[];
+  if(late.length)parts.push(`${late.length} late dose(s)`);
+  if(pending.length)parts.push(`${pending.length} scheduled reminder(s) pending`);
+  showToast(parts.length?parts.join(' · '):'No pending notifications');
+}
+function toggleTheme(){
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'light':'dark');
+  document.getElementById('themeBtn').setAttribute('aria-pressed',String(!dark));
+  showToast(dark?'Light mode on':'Dark mode on');
+}
+function toggleTextSize(){
+  const on=document.body.classList.toggle('large-text');
+  document.getElementById('textSizeBtn').setAttribute('aria-pressed',String(on));
+  showToast(on?'Larger text turned on':'Larger text turned off');
+}
+function sendAlertToDoctor(){
+  const p=patients[selected];
+  p.timelineExtra.unshift({label:`Alert sent to care physician for ${p.name}`,sub:'Care team action',time:'Just now',color:'#147a78'});
+  if(p.timelineExtra.length>4)p.timelineExtra.pop();
+  renderDetail();
+  showToast(`Alert sent to the reviewing physician for ${p.name}`);
+}
+function copyClinicalNote(){
+  const p=patients[selected];
+  const note=`${p.name} — ${p.age}y, ${p.condition}\nRisk: ${p.risk} (${p.status} risk, ${p.pattern}, ${p.confidence})\n\n${stripHtml(generateAssessment(p))}\n\nSuggested next step: ${suggestedNextStep(p)}`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(note).then(()=>showToast('Clinical note copied to clipboard')).catch(()=>showToast('Could not copy — clipboard permission blocked'));
+  } else {
+    showToast('Clipboard is not available in this browser context');
+  }
+}
+
+// --- Reminder modal ---
+function buildMessage(p){
+  let msg=`Hello ${p.name}, your care team would like to support your medication routine.\n`;
+  if(document.getElementById('chkDiet').checked)msg+=`\nDiet tip: ${p.diet[0]}`;
+  if(document.getElementById('chkActivity').checked)msg+=`\nActivity tip: ${p.activityRec[0]}`;
+  if(document.getElementById('chkAppt').checked)msg+=`\nYou can reschedule your next appointment in the app.`;
+  if(document.getElementById('chkDevice').checked)msg+=`\nYour smart dispenser will send a follow-up reminder.`;
+  msg+=`\n\nQuestions? Contact your clinic anytime.`;
+  return msg;
+}
+function buildPlanItems(p){
+  const items=[];
+  if(document.getElementById('chkDiet').checked)items.push('🥗 '+p.diet[0]);
+  if(document.getElementById('chkActivity').checked)items.push('🚶 '+p.activityRec[0]);
+  if(document.getElementById('chkAppt').checked)items.push('📅 Appointment support available');
+  if(document.getElementById('chkDevice').checked)items.push('💊 Dispenser reminder active');
+  return items;
+}
+function previewReminder(){
+  const p=patients[selected];
+  const choice=document.getElementById('sendTime').value;
+  document.getElementById('message').value=document.getElementById('message').value||buildMessage(p);
+  document.getElementById('phoneMessage').textContent=document.getElementById('message').value;
+  document.getElementById('phoneTime').textContent=choice.startsWith('Now')?'Now':`Scheduled: ${choice}`;
+  const items=buildPlanItems(p);
+  document.getElementById('phonePlan').innerHTML=items.length?items.map(x=>`<div>${x}</div>`).join(''):'No plan items selected';
+}
+function openReminder(triggerEl){
+  lastFocusedEl=triggerEl||document.activeElement;
+  const p=patients[selected],reasons=[];
+  if(p.risk>=50)reasons.push(['Risk score',`${p.risk} · ${p.pattern}`]);
+  if(p.appt!=='On track')reasons.push(['Appointments',p.appt]);
+  if(p.deviceState==='Late dose')reasons.push(['Medication',p.last]);
+  if(!reasons.length)reasons.push(['Preventive support','Continue adherence routine']);
+  document.getElementById('reminderSub').textContent=`${p.name} · ${p.condition} · clinician review required`;
+  document.getElementById('triggers').innerHTML=reasons.map(r=>`<div class="trigger"><b>${r[0]}</b>${r[1]}</div>`).join('');
+  document.getElementById('message').value=buildMessage(p);
+  previewReminder();
+  const modal=document.getElementById('reminderModal');
+  modal.classList.add('open');
+  document.getElementById('message').focus();
+  document.addEventListener('keydown',trapModalKeydown);
+}
+function closeReminder(){
+  document.getElementById('reminderModal').classList.remove('open');
+  document.removeEventListener('keydown',trapModalKeydown);
+  if(lastFocusedEl&&typeof lastFocusedEl.focus==='function')lastFocusedEl.focus();
+}
+function trapModalKeydown(e){
+  const modal=document.getElementById('reminderModal');
+  if(e.key==='Escape'){closeReminder();return;}
+  if(e.key!=='Tab')return;
+  const focusables=modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if(!focusables.length)return;
+  const first=focusables[0],last=focusables[focusables.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+}
+function sendReminderPlan(){
+  const i=selected,p=patients[i];
+  const when=document.getElementById('sendTime').value;
+  const support=['chkAppt','chkDiet','chkActivity','chkDevice'].filter(id=>document.getElementById(id).checked).length;
+  const message=document.getElementById('message').value;
+  const planItems=buildPlanItems(p);
+  closeReminder();
+  if(when.startsWith('Now')){
+    const delta=5+support;
+    const before=applyAdherenceEvent(i,true,delta);
+    p.lastReminderSummary={message,planItems,when:'Sent just now'};
+    renderPatients();renderDetail();updateOverviewCounts();updateAlertBar();
+    showToast(`Reminder sent — ${p.name}'s risk score improved from ${before} to ${p.risk}`);
+  } else {
+    p.pendingReminder=true;
+    p.device=`Connected · reminder scheduled (${when})`;
+    p.lastReminderSummary={message,planItems,when:`Scheduled: ${when}`};
+    renderDetail();updateOverviewCounts();
+    showToast(`Reminder scheduled for ${when}. Use “Simulate next week” to see the effect.`);
+  }
+}
+
+document.getElementById('patients').addEventListener('keydown',e=>{
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+  const items=Array.from(document.querySelectorAll('#patients .patient'));
+  const idx=items.indexOf(document.activeElement);
+  if(idx===-1)return;
+  e.preventDefault();
+  const next=e.key==='ArrowDown'?items[Math.min(items.length-1,idx+1)]:items[Math.max(0,idx-1)];
+  next.focus();
+});
+
+// --- New-tab reports: device fleet, care tasks, panel reports ---
+function reportShell(title,bodyHtml){
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title} — RippleRx</title>
+  <style>
+    body{font-family:Inter,system-ui,sans-serif;background:#f4f7f5;color:#12232f;margin:0;padding:32px 40px}
+    h1{font:600 26px Georgia,serif;margin:0 0 4px}
+    .sub{color:#4f6169;margin:0 0 24px}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #dce5e1;border-radius:8px;overflow:hidden}
+    th,td{text-align:left;padding:10px 14px;border-bottom:1px solid #dce5e1;font-size:14px}
+    th{background:#eef4f1;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#4f6169}
+    .pill{display:inline-block;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700}
+    .high{background:#fae7e5;color:#8c2f28}.medium{background:#fff2dc;color:#734a0f}.low{background:#e4f2e9;color:#184f37}
+    .card{background:#fff;border:1px solid #dce5e1;border-radius:9px;padding:16px 18px;margin-bottom:14px}
+    .card h2{font:600 15px Georgia,serif;margin:0 0 8px;display:flex;gap:10px;align-items:center}
+    .card ul{margin:0;padding-left:18px}
+    .foot{color:#4f6169;font-size:12px;margin-top:28px}
+  </style></head><body>
+  <h1>${title}</h1><p class="sub">RippleRx — generated ${new Date().toLocaleString()} · synthetic demo data</p>
+  ${bodyHtml}
+  <p class="foot">Demo only — all patient and device records are synthetic. A dispense event indicates medication was removed, not confirmed ingestion.</p>
+  </body></html>`;
+}
+function openReportTab(title,bodyHtml){
+  const blob=new Blob([reportShell(title,bodyHtml)],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+}
+function openDeviceFleetReport(){
+  const rows=[...patients].sort((a,b)=>b.risk-a.risk).map(p=>`<tr><td>${p.name}</td><td>${p.condition}</td><td>${p.device}</td><td>${p.deviceState}</td><td>${p.streak} days</td><td><span class="pill ${p.status}">${p.status}</span></td></tr>`).join('');
+  const connected=patients.filter(p=>p.deviceState!=='No device').length;
+  const body=`<div class="card"><h2>Fleet summary</h2><p>${connected} of ${patients.length} patients have a connected smart dispenser · ${patients.filter(p=>p.deviceState==='Late dose').length} device(s) currently showing a late dose.</p></div>
+  <table><thead><tr><th>Patient</th><th>Condition</th><th>Device status</th><th>Last dose</th><th>Streak</th><th>Risk tier</th></tr></thead><tbody>${rows}</tbody></table>`;
+  openReportTab('Device fleet',body);
+}
+function openCareTasksReport(){
+  const sorted=[...patients].sort((a,b)=>b.risk-a.risk);
+  const cards=sorted.map(p=>`<div class="card"><h2>${p.name} <span class="pill ${p.status}">${p.status}</span></h2><ul>${p.plan.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  openReportTab('Care tasks',cards);
+}
+function openPanelReport(){
+  const sorted=[...patients].sort((a,b)=>b.risk-a.risk);
+  const rows=sorted.map(p=>`<tr><td>${p.name}</td><td>${p.condition}</td><td>${p.risk}</td><td><span class="pill ${p.status}">${p.status}</span></td><td>${p.pattern}</td><td>${suggestedNextStep(p)}</td></tr>`).join('');
+  const avg=Math.round(patients.reduce((s,p)=>s+p.risk,0)/patients.length);
+  const body=`<div class="card"><h2>Panel summary</h2><p>${patients.length} patients · average risk score ${avg} · ${patients.filter(p=>p.status==='high').length} high risk · ${patients.filter(p=>p.status==='medium').length} medium risk · ${patients.filter(p=>p.status==='low').length} low risk</p></div>
+  <table><thead><tr><th>Patient</th><th>Condition</th><th>Risk</th><th>Tier</th><th>Pattern</th><th>Suggested next step</th></tr></thead><tbody>${rows}</tbody></table>`;
+  openReportTab('Panel report',body);
+}
+
+populateConditionFilter();
+renderPatients();renderDetail();updateOverviewCounts();updateAlertBar();
+</script>
+</body></html>
